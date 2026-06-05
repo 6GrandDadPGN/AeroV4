@@ -1,6 +1,5 @@
-local EXPECTED_REPO_OWNER = "poopparty"
-local EXPECTED_REPO_NAME = "poopparty"
-local ACCOUNT_SYSTEM_URL = "https://raw.githubusercontent.com/poopparty/whitelistcheck/main/AccountSystem.lua"
+local EXPECTED_REPO_OWNER = "6GrandDadPGN"
+local EXPECTED_REPO_NAME = "AeroV4"
 if not shared.VapeLoaded then
     shared.VapeLoaded = true
 else
